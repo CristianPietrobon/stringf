@@ -1,0 +1,28 @@
+{
+  "name": "stringfplus",
+  "version": "1.0.0",
+  "description": "string formatting utility",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CristianPietrobon/stringf.git"
+  },
+  "keywords": [
+    "string",
+    "formatting",
+    "html",
+    "code",
+    "formatter"
+  ],
+  "author": "Cristian Pietrobon",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CristianPietrobon/stringf/issues"
+  },
+  "homepage": "https://github.com/CristianPietrobon/stringf#readme"
+}
