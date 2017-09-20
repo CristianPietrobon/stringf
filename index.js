@@ -582,7 +582,7 @@ class stringfplus {
             fun += '+(o==null?(function(){throw new Error("undefined ["+' + JSON.stringify('argument') + '+"]")})():((function(' + fun_pars + '){try {' + code + '}catch(err){return "";}})(' + args + '))';
         return fun;
     }
-    format(language, ...objlist) {
+    format(language = '', ...objlist) {
         if (this.compileFunction == null)
             return '';
         if (language === '')

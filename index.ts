@@ -690,7 +690,7 @@ export class stringfplus{
         return fun;
     }
 
-    public format(language:string,...objlist: object[]):string{
+    public format(language:string = '',...objlist: object[]):string{
         if (this.compileFunction == null) return '';
         if (language === '') language = this.languageDefault;
         return this.compileFunction(Object.assign({},...objlist),language);
