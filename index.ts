@@ -263,9 +263,12 @@ export class stringf{
 
 export interface stirngfBIF{
     name:string,
-    argname:string,
-    code_head:string,
-    code_tail:string,
+    argname?:string,
+    code_head?:string,
+    code_tail?:string,
+    fnative_head?:(global_arg:any,arg:any)=>string; // function used for execute external code
+    fnative_tail?:(global_arg:any,arg:any)=>string; // function used for execute external code
+    fnative_code?:(global_arg:any,arg:any)=>string; // function used for execute external code
 }
 
 interface stringfToken{
@@ -274,9 +277,9 @@ interface stringfToken{
 }
 
 export class stringfplus{
-    private compileFunction:(opt:object,language:string)=>string;
+    private compileFunction:(opt:object,language:string,__native:(code:string,type:string,arg:any)=>string)=>string;
 
-    private static BIF:Map<string,stirngfBIF> = new Map();
+    public static BIF:Map<string,stirngfBIF> = new Map();
     private tokenList:Map<string,stringfToken> = new Map();
 
     public splitter = '@@';
@@ -319,6 +322,10 @@ export class stringfplus{
     }
 
     public static addBIF(bif:stirngfBIF){
+        if (bif.code_head == null) bif.code_head='';
+        if (bif.code_tail == null) bif.code_tail='';
+        if (bif.argname == null) bif.argname='arg'; //shadow global arg
+
         bif.code_head = bif.code_head.replace(/echo/g,'_r+=');
         bif.code_tail = bif.code_tail.replace(/echo/g,'_r+=');
         stringfplus.BIF.set(bif.name,bif);
@@ -358,8 +365,13 @@ export class stringfplus{
         let code = this.parse(value);
 
         let checkCode:GenCode = new GenCode();
+        const entry = this.tokenList.entries();
+        while(true){
+            const iterator = entry.next();
+            if (iterator == null) break;
+            const t = iterator.value;
+            if (t == null || t.length == 0) break;
 
-        for(let t of this.tokenList.entries()){
             let obj = t[0].split('.');
 
             if (!checkCode.sectionExists(obj[0]))
@@ -431,7 +443,7 @@ export class stringfplus{
         fun += code;
         fun += ';return _r;';
         //console.log(fun);
-        this.compileFunction = <(opt:object)=>string>new Function('arg','language',fun);
+        this.compileFunction = <(opt:object)=>string>new Function('arg','language','__native',fun);
     }
 
     private skipSpace(val:strIndex){
@@ -629,8 +641,16 @@ export class stringfplus{
                 }
 
                 fun+=bif.code_head;
+                if (bif.fnative_head != null)
+                    fun+=";_r+=__native('"+bif.name+"','head',"+bif.argname+");";
+
                 fun+= elsecode;
+                if (bif.fnative_code != null)
+                    fun+=";_r+=__native('"+bif.name+"','code',"+bif.argname+");";
+
                 fun+=bif.code_tail;
+                if (bif.fnative_tail != null)
+                    fun+=";_r+=__native('"+bif.name+"','tail',"+bif.argname+");";
 
                 fun +='}';
         }
@@ -690,10 +710,44 @@ export class stringfplus{
         return fun;
     }
 
-    public format(language:string = '',...objlist: object[]):string{
+    public format(opt?:{
+        language?:string,
+    }, ...objlist: object[]):string{
         if (this.compileFunction == null) return '';
-        if (language === '') language = this.languageDefault;
-        return this.compileFunction(Object.assign({},...objlist),language);
+        if (opt == null) opt = {};
+        if (opt.language ==null || opt.language === '') opt.language = this.languageDefault;
+        const gargs = Object.assign({},...objlist);
+        return this.compileFunction(gargs,opt.language,(code:string,type:string,arg:any)=>{
+            //call native code
+            const BIF = stringfplus.BIF.get(code);
+            if (BIF == null){
+                console.error("stringfplus: native call of non existing BIF [%s]",code);
+                return '';
+            }
+
+            switch (type){
+                case 'head':
+                    if (BIF.fnative_head == null){
+                        console.error("stringfplus: native call of non existing 'head' function for BIF [%s]",code);
+                        return '';
+                    }
+                    return BIF.fnative_head(gargs,arg);
+                case 'tail':
+                    if (BIF.fnative_tail == null){
+                        console.error("stringfplus: native call of non existing 'tail' function for BIF [%s]",code);
+                        return '';
+                    }
+                    return BIF.fnative_tail(gargs,arg);
+                case 'code':
+                    if (BIF.fnative_code == null){
+                        console.error("stringfplus: native call of non existing 'code' function for BIF [%s]",code);
+                        return '';
+                    }
+                    return BIF.fnative_code(gargs,arg);
+            }
+
+            return '';
+        });
     }
 }
 
@@ -706,7 +760,7 @@ export class stringfplus{
 
 let htmlTag= ['a','div','article','p','i','b','ul',
     'li','h1','h2','h3','h4','h5','h6','title','style',
-    'head','html','body'];
+    'head','html','body','span'];
 
 for(let tag of htmlTag){
     stringfplus.addBIF({
