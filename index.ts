@@ -640,7 +640,7 @@ export class stringfplus{
                     elsecode = this.parse(this.getCode('{', '}', val));
                 }
 
-                fun+=bif.code_head;
+                fun+=/*bif.code_head*/this.parse(bif.code_head!=null?bif.code_head:'');
                 if (bif.fnative_head != null)
                     fun+=";_r+=__native('"+bif.name+"','head',"+bif.argname+");";
 
@@ -648,7 +648,7 @@ export class stringfplus{
                 if (bif.fnative_code != null)
                     fun+=";_r+=__native('"+bif.name+"','code',"+bif.argname+");";
 
-                fun+=bif.code_tail;
+                fun+=/*bif.code_tail*/this.parse(bif.code_tail!=null?bif.code_tail:'');
                 if (bif.fnative_tail != null)
                     fun+=";_r+=__native('"+bif.name+"','tail',"+bif.argname+");";
 
@@ -766,7 +766,7 @@ for(let tag of htmlTag){
     stringfplus.addBIF({
         name:tag,
         argname: 'farg',
-        code_head: `
+        code_head: `@@{
         echo("<`+tag+`");
         if (farg != null)
         for (let k of Object.keys(farg)) {
@@ -775,15 +775,15 @@ for(let tag of htmlTag){
             else
             echo(' ' + k);
         }
-        echo('>');`,
-        code_tail: 'echo("</'+tag+'>")',
+        echo('>');}`,
+        code_tail: '@@{echo("</'+tag+'>")}',
     });
 }
 
 stringfplus.addBIF({
     name:'img',
     argname: 'farg',
-    code_head: `
+    code_head: `@@{
         echo("<img");
         if (farg != null)
         for (let k of Object.keys(farg)) {
@@ -792,6 +792,6 @@ stringfplus.addBIF({
             else
             echo(' ' + k);
         }
-        echo('>');`,
+        echo('>');}`,
     code_tail: '',
 });
