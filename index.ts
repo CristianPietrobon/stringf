@@ -277,7 +277,7 @@ interface stringfToken{
 }
 
 export class stringfplus{
-    private compileFunction:(opt:object,language:string,__native:(code:string,type:string,arg:any)=>string)=>string;
+    private compileFunction:(opt:object,language:string,__native:(code:string,type:string,arg:any)=>any)=>string;
 
     public static BIF:Map<string,stirngfBIF> = new Map();
     private tokenList:Map<string,stringfToken> = new Map();
@@ -442,7 +442,7 @@ export class stringfplus{
         fun += checkCode.compile();
         fun += code;
         fun += ';return _r;';
-        //console.log(fun);
+        //console.error(fun);
         this.compileFunction = <(opt:object)=>string>new Function('arg','language','__native',fun);
     }
 
@@ -455,6 +455,24 @@ export class stringfplus{
                 val.value[val.index] === '\r')) && val.index < val.value.length)val.index++; //skip all space
         }
     }
+
+    private IsSplitter(val:strIndex):boolean{
+        return val.value.indexOf(this.splitter,val.index)===val.index;
+    }
+
+    private GetTillEndLine(val:strIndex):string{
+        let start = val.index;
+        let i = 0;
+        for(;val.index<=val.value.length;val.index++,i++) {
+            this.skipSpace(val);
+            if (this.EndLine(val)) {
+                //i--;
+                break;
+            }
+        }
+        return val.value.substr(start,i);
+    }
+
 
     private EndLine(val:strIndex):boolean{
         if (val.value[val.index] === this.splitter[0]  ||
@@ -583,6 +601,45 @@ export class stringfplus{
         return '';
     }
 
+    private parseArgument(code:string):string{
+        let codeCorrect = '';
+        let value:strIndex = {
+            value:code,
+            index:0,
+            start:0
+        };
+        while(value.index < value.value.length){
+            this.skipSpace(value);
+            if (this.IsSplitter(value)){
+                value.index+=this.splitter.length;
+                let fun = this.GetTillEndLine(value);
+                //console.error(fun);
+                if (value.value[value.index] === '('){
+
+                    let bif = stringfplus.BIF.get(fun);
+                    if (bif == null)
+                        throw new Error('invalid function ['+fun+']');
+                    if (bif.fnative_code == null)
+                        throw new Error('invalid function ['+fun+'] call: [fnative_code] is missing or not a native function');
+
+                    let cc = this.getCode('(',')',value);
+                    if (cc == null) throw new Error('missing ) for function call ['+fun+']');
+                    cc = cc.trim();
+                    if (cc == '') cc = 'null';
+
+                    codeCorrect += '__native("'+fun+'","code",'+this.parseArgument(cc)+')';//1 time
+                }else {
+                    codeCorrect += 'arg.'+fun;
+                }
+            }else {
+                if (value.value[value.index] != ' ')
+                    codeCorrect += value.value[value.index];
+                value.index++;
+            };
+        }
+        return codeCorrect;
+    }
+
     private parseFunction(val:strIndex):string{
         let fun = '';
         let tok = val.value.slice(val.start, val.index);
@@ -595,7 +652,16 @@ export class stringfplus{
         let subcode ='';
         let elsecode = '';
 
-        code = code.replace(/@@/g,'arg.');
+        let codeCorrect = '';
+
+        /* COMPILE FUNCTION ARGUMENTS*/
+        /*format code*/
+        codeCorrect = this.parseArgument(code);
+
+        //code = code.replace(/@@/g,'arg.');
+       //console.error(code);
+        //console.error(codeCorrect);
+        code = codeCorrect;
 
         switch (tok){
             case 'if':
@@ -795,3 +861,17 @@ stringfplus.addBIF({
         echo('>');}`,
     code_tail: '',
 });
+
+/*TEST*/
+
+/*stringfplus.addBIF({
+    name:'Test',
+    argname: 'farg',
+    code_head: ``,
+    code_tail: '',
+    fnative_code: (global_arg:any,arg:any)=>{
+        return 'ciao' + arg;
+    }
+});
+let fun = new stringfplus(`@@Test( @@Test('ciao') )`).format();
+console.log(fun);*/

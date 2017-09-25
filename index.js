@@ -369,6 +369,20 @@ class stringfplus {
                 val.index++;
         }
     }
+    IsSplitter(val) {
+        return val.value.indexOf(this.splitter, val.index) === val.index;
+    }
+    GetTillEndLine(val) {
+        let start = val.index;
+        let i = 0;
+        for (; val.index <= val.value.length; val.index++, i++) {
+            this.skipSpace(val);
+            if (this.EndLine(val)) {
+                break;
+            }
+        }
+        return val.value.substr(start, i);
+    }
     EndLine(val) {
         if (val.value[val.index] === this.splitter[0] ||
             val.value[val.index] === ' ' ||
@@ -495,6 +509,45 @@ class stringfplus {
             return this.parse(rest);
         return '';
     }
+    parseArgument(code) {
+        let codeCorrect = '';
+        let value = {
+            value: code,
+            index: 0,
+            start: 0
+        };
+        while (value.index < value.value.length) {
+            this.skipSpace(value);
+            if (this.IsSplitter(value)) {
+                value.index += this.splitter.length;
+                let fun = this.GetTillEndLine(value);
+                if (value.value[value.index] === '(') {
+                    let bif = stringfplus.BIF.get(fun);
+                    if (bif == null)
+                        throw new Error('invalid function [' + fun + ']');
+                    if (bif.fnative_code == null)
+                        throw new Error('invalid function [' + fun + '] call: [fnative_code] is missing or not a native function');
+                    let cc = this.getCode('(', ')', value);
+                    if (cc == null)
+                        throw new Error('missing ) for function call [' + fun + ']');
+                    cc = cc.trim();
+                    if (cc == '')
+                        cc = 'null';
+                    codeCorrect += '__native("' + fun + '","code",' + this.parseArgument(cc) + ')';
+                }
+                else {
+                    codeCorrect += 'arg.' + fun;
+                }
+            }
+            else {
+                if (value.value[value.index] != ' ')
+                    codeCorrect += value.value[value.index];
+                value.index++;
+            }
+            ;
+        }
+        return codeCorrect;
+    }
     parseFunction(val) {
         let fun = '';
         let tok = val.value.slice(val.start, val.index);
@@ -505,7 +558,9 @@ class stringfplus {
         code = code.trim();
         let subcode = '';
         let elsecode = '';
-        code = code.replace(/@@/g, 'arg.');
+        let codeCorrect = '';
+        codeCorrect = this.parseArgument(code);
+        code = codeCorrect;
         switch (tok) {
             case 'if':
                 subcode = this.getCode('{', '}', val);
