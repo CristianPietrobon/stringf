@@ -540,8 +540,7 @@ class stringfplus {
                 }
             }
             else {
-                if (value.value[value.index] != ' ')
-                    codeCorrect += value.value[value.index];
+                codeCorrect += value.value[value.index];
                 value.index++;
             }
             ;
@@ -580,6 +579,9 @@ class stringfplus {
                     throw new Error('missing {} for [for]');
                 subcode = this.parse(subcode);
                 fun += ';for(' + code + '){' + subcode + '}';
+                break;
+            case 'code':
+                fun += ';' + code + ';';
                 break;
             case 'echo':
                 fun += ';_r+=(' + code + ');';

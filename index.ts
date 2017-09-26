@@ -266,9 +266,9 @@ export interface stirngfBIF{
     argname?:string,
     code_head?:string,
     code_tail?:string,
-    fnative_head?:(global_arg:any,arg:any)=>string; // function used for execute external code
-    fnative_tail?:(global_arg:any,arg:any)=>string; // function used for execute external code
-    fnative_code?:(global_arg:any,arg:any)=>string; // function used for execute external code
+    fnative_head?:(global_arg:any,arg:any)=>any; // function used for execute external code
+    fnative_tail?:(global_arg:any,arg:any)=>any; // function used for execute external code
+    fnative_code?:(global_arg:any,arg:any)=>any; // function used for execute external code
 }
 
 interface stringfToken{
@@ -632,7 +632,7 @@ export class stringfplus{
                     codeCorrect += 'arg.'+fun;
                 }
             }else {
-                if (value.value[value.index] != ' ')
+                //if (value.value[value.index] != ' ')
                     codeCorrect += value.value[value.index];
                 value.index++;
             };
@@ -686,6 +686,10 @@ export class stringfplus{
                 subcode = this.parse(subcode);
 
                 fun += ';for('+code+'){'+subcode+'}';
+                break;
+
+            case 'code':
+                fun += ';'+code+';';
                 break;
 
             case 'echo':
@@ -873,5 +877,14 @@ stringfplus.addBIF({
         return 'ciao' + arg;
     }
 });
-let fun = new stringfplus(`@@Test( @@Test('ciao') )`).format();
+let fun = new stringfplus(`        
+        @@for(let name of @@list){
+            @@declare(let menu = @@Test(name))
+            <ul class="inline">
+            <li><p class="titleFooter">@@echo(menu.name)</p></li>
+            @@for(let menuItem of menu.menu){
+            <li><a href="@@echo(menuItem.url)" class="footerLink">@@echo(menuItem.text)</a></li>
+            }
+            </ul>
+        }`).format(null,{list:[]});
 console.log(fun);*/
